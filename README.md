@@ -40,6 +40,10 @@ npm run format:check # Check source formatting
 
 ## How the code works
 
+For a guided source read, start with [gameData.js](src/gameData.js) to see the memory layout, then follow `initialize`, `buildGrid`, `tick`, and `integratePositions` in [logic.js](src/logic.js). Continue with `createBoard` and `render` in [board.js](src/board.js), then [main.js](src/main.js) for frame ordering and [performance.js](src/performance.js) for population tuning.
+
+Function comments explain purpose, data flow, and design choices. Inline comments walk through the grid passes, wrapped coordinates, steering math, and GPU uploads. They distinguish performance mechanisms from approximations and measurement limits; tests and helper scripts are annotated too.
+
 ### 1. Allocate a Structure of Arrays
 
 [gameData.js](src/gameData.js) owns the mutable simulation state. This simplified excerpt shows the central data layout:
@@ -65,6 +69,8 @@ Positions and velocities use 32-bit floats. Cell counters, offsets, and sorted i
 [logic.js](src/logic.js) contains initialization, grid building, steering, and movement. The position integration function illustrates the data-in / transformation / data-out pattern:
 
 ```js
+// Stream the live position/velocity arrays after all steering queries have finished.
+// Write into existing slots so rendering can reuse the same buffers.
 export function integratePositions(gameData, balance, stepSeconds) {
   for (let agentIndex = 0; agentIndex < gameData.agentCount; agentIndex++) {
     const nextX =
