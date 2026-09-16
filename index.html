@@ -6,14 +6,14 @@
     <meta name="theme-color" content="#111310" />
     <meta
       name="description"
-      content="A data-oriented swarm simulator built with Three.js and JavaScript typed arrays. Explore up to 300,000 agents, read the code, and learn how it works."
+      content="A data-oriented flocking demo built with Three.js and JavaScript typed arrays."
     />
     <title>Murmur — Three.js + Typed Arrays Swarm</title>
     <link rel="canonical" href="https://swarm.nitzan.games/" />
     <meta property="og:title" content="Murmur — Three.js + Typed Arrays" />
     <meta
       property="og:description"
-      content="Data-oriented design in motion. A flocking demo with up to 300,000 agents, one draw call, and readable code examples."
+      content="A data-oriented flocking demo built with Three.js and JavaScript typed arrays."
     />
     <meta property="og:url" content="https://swarm.nitzan.games/" />
     <meta property="og:type" content="website" />
@@ -58,10 +58,7 @@
               <span class="tiny-line"></span> DATA-ORIENTED DESIGN
             </div>
             <h1>Three.js.<br />Typed arrays.</h1>
-            <p>
-              A data-oriented flocking demo. Up to 300,000 agents, one draw call, a 60 fps
-              target.
-            </p>
+            <p>A data-oriented flocking demo.</p>
           </div>
           <div class="stage-coordinate coordinate-top">FIELD / 001</div>
           <div class="stage-coordinate coordinate-bottom">
@@ -152,7 +149,7 @@
                 >Auto-scale population
                 <span
                   class="help-dot"
-                  title="Searches for the largest flock that fits a 60 fps frame budget. Population adjusts as device load changes."
+                  title="Adjusts the population using measured frame timing."
                   >?</span
                 ></label
               ><input
@@ -478,10 +475,8 @@ renderer.render(scene, camera);</code></pre>
             available.
           </p>
           <p>
-            60 fps is a target. Display refresh rate, browser scheduling, hardware,
-            battery settings, and thermal throttling affect the sustainable population.
-            The 300,000-agent pool is a capacity limit. The readouts measure frame
-            intervals and CPU simulation time; they are not GPU timestamps.
+            Performance depends on your device and browser. The readouts show measured
+            frame intervals and CPU simulation time.
           </p>
         </div>
       </section>

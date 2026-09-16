@@ -425,12 +425,12 @@ export function updateStats(board, gameData, balance, performanceData) {
     : !gameData.autoScale
       ? "You’re in control. Slide to set the population."
       : status === "POOL LIMIT"
-        ? "All 300,000 agents are in flight."
+        ? "At the population limit."
         : status === "DEVICE LIMIT"
-          ? "At minimum population; device below target."
+          ? "At the minimum population."
           : status === "TUNING"
             ? "Finding your device’s sweet spot."
-            : "Adapting the flock to a 60 fps target.";
+            : "Adapting the flock to your device.";
   ui["fps-value"].textContent = gameData.paused
     ? "—"
     : Math.round(performanceData.fps).toString();

@@ -2,7 +2,7 @@
 
 **[Run the live demo](https://swarm.nitzan.games/)** · **[Data-oriented-design skill](https://github.com/Data-Oriented-Design-for-Games/data-oriented-design)** · **[The book](https://www.manning.com/books/high-performance-unity-game-development)**
 
-A browser flocking simulator that demonstrates **data-oriented design in JavaScript**. The CPU simulates agents in parallel typed arrays, a spatial grid bounds neighbor work, and Three.js draws the flock with one instanced draw call. Auto-scale searches for a population that fits a 60 fps budget, with a preallocated capacity of 300,000 agents.
+A data-oriented flocking demo built with **JavaScript typed arrays and Three.js**.
 
 The **Behind the swarm** panel explains the implementation with code examples and links to the source. This repository contains the readable, commented source used to build the public site; production bundles are minified by Vite.
 
@@ -148,7 +148,7 @@ Auto-scale warms up for two measurement windows, then increases the population a
 
 These readings are not GPU timestamps. Hidden tabs stop the loop and reset tuning on return. Delta time is clamped after stalls. Reduced-motion preferences lower the default flight speed.
 
-An earlier local Chrome check reached **62,400 agents at a measured 60 fps**, with 12.31 ms CPU simulation time. The complete 300,000-agent pool also rendered, without a 60 fps claim. CPU-only benchmark medians were approximately 1.8 ms at 10K, 4.7 ms at 25K, 9.8 ms at 50K, and 20.4 ms at 100K. These are short development measurements, not sustained thermal benchmarks or guarantees for other hardware. Run `npm run benchmark` and test the live app on physical target devices.
+Performance depends on your device and browser. Use the live readouts to see how your device performs. Run `npm run benchmark` to measure CPU simulation time separately from rendering.
 
 ## Validation
 
