@@ -2,6 +2,8 @@ import * as THREE from "three";
 import * as Logic from "./logic.js";
 import { presets } from "./balance.js";
 import { resetTuning, sampleHistory } from "./performance.js";
+import { createFishAsset, fishVertexShader, fishFragmentShader } from "./fish.js";
+import { createFishInspector, renderFishInspector } from "./fishInspector.js";
 
 // Board owns presentation resources and translates browser input into plain state.
 // Three.js objects and DOM nodes are shared scene/UI resources, not one per agent.
@@ -78,9 +80,10 @@ export function createBoard(gameData, balance, performanceData) {
     balance.height / 2,
     -balance.height / 2,
     0.1,
-    10,
+    300,
   );
-  camera.position.z = 5;
+  // Leave depth room for the volumetric fish while retaining the same 2D projection.
+  camera.position.z = 100;
   const scene = new THREE.Scene();
   // Instancing repeats one shape using attributes, instead of making an agent mesh pool.
   const geometry = new THREE.InstancedBufferGeometry();
@@ -144,6 +147,27 @@ export function createBoard(gameData, balance, performanceData) {
   // Disable mesh culling so those incomplete bounds cannot hide the entire flock.
   mesh.frustumCulled = false;
   scene.add(mesh);
+  // Both appearances are allocated once. Switching swaps this single mesh's resources.
+  const fishAsset = createFishAsset();
+  const fishGeometry = new THREE.InstancedBufferGeometry().copy(fishAsset.geometry);
+  for (let attributeIndex = 0; attributeIndex < 4; attributeIndex++)
+    fishGeometry.setAttribute(
+      attributeNames[attributeIndex],
+      instanceAttributes[attributeIndex],
+    );
+  fishGeometry.setAttribute("shade", geometry.getAttribute("shade"));
+  const fishMaterial = new THREE.ShaderMaterial({
+    vertexShader: fishVertexShader,
+    fragmentShader: fishFragmentShader,
+    vertexColors: true,
+    side: THREE.DoubleSide,
+    uniforms: {
+      // Reuse the same view uniforms, so resize applies consistently to both modes.
+      ...material.uniforms,
+      swimPalette: { value: fishAsset.animationTexture },
+      swimTime: { value: 0 },
+    },
+  });
   const chart = document.querySelector("#frame-chart");
   const ids = [
     "population-value",
@@ -177,6 +201,15 @@ export function createBoard(gameData, balance, performanceData) {
     scene,
     geometry,
     material,
+    mesh,
+    triangleGeometry: geometry,
+    triangleMaterial: material,
+    fishGeometry,
+    fishMaterial,
+    fishAsset,
+    fishInspector: createFishInspector(fishAsset),
+    appearance: "triangles",
+    animationTime: 0,
     instanceAttributes,
     attributeUpdateRanges,
     chart,
@@ -199,6 +232,40 @@ export function createBoard(gameData, balance, performanceData) {
   resize(board, balance, performanceData);
   refreshControls(board, gameData, balance);
   return board;
+}
+
+/**
+ * Select shared geometry/material without recreating agents or changing their motion.
+ * Both modes reference the same instance arrays. Automatic mode restarts at a modest
+ * count when entering the heavier fish renderer, then measures the new workload.
+ * Manual mode preserves the exact user-selected population for direct comparison.
+ */
+export function setAppearance(board, gameData, balance, performanceData, appearance) {
+  const fishMode = appearance === "fish";
+  board.appearance = appearance;
+  board.geometry = fishMode ? board.fishGeometry : board.triangleGeometry;
+  board.material = fishMode ? board.fishMaterial : board.triangleMaterial;
+  board.mesh.geometry = board.geometry;
+  board.mesh.material = board.material;
+  if (fishMode && gameData.autoScale)
+    Logic.setPopulation(
+      gameData,
+      balance,
+      Math.min(gameData.agentCount, balance.initialCount),
+    );
+  // Expose selection in both visual and accessible state; no per-agent flags are needed.
+  for (const button of document.querySelectorAll(".appearance-mode")) {
+    const selected = button.dataset.appearance === appearance;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", selected);
+  }
+  document.getElementById("appearance-description").textContent = fishMode
+    ? "Animated 3D mesh · 5-bone skeleton."
+    : "Two triangles per agent.";
+  document.getElementById("inspect-fish").hidden = !fishMode;
+  resetTuning(performanceData, balance);
+  refreshControls(board, gameData, balance);
+  updateStats(board, gameData, balance, performanceData);
 }
 
 /**
@@ -304,6 +371,12 @@ export function refreshControls(board, gameData, balance) {
  */
 function attachInput(board, gameData, balance, performanceData) {
   const ui = board.ui;
+  for (const button of document.querySelectorAll(".appearance-mode")) {
+    // A mode click changes the rendering workload while preserving the simulation pool.
+    button.addEventListener("click", () => {
+      setAppearance(board, gameData, balance, performanceData, button.dataset.appearance);
+    });
+  }
   // A mode change starts a fresh measurement window for automatic population tuning.
   ui["auto-scale"].addEventListener("change", () => {
     Logic.setParameter(gameData, "autoScale", ui["auto-scale"].checked);
@@ -386,6 +459,7 @@ function attachInput(board, gameData, balance, performanceData) {
    */
   function reset() {
     Logic.reseed(gameData, balance);
+    board.animationTime = 0;
     resetTuning(performanceData, balance);
   }
   const fullscreenButton = document.getElementById("fullscreen");
@@ -439,6 +513,7 @@ function attachInput(board, gameData, balance, performanceData) {
     if (
       event.target.matches("input, button, a, select, textarea") ||
       about.open ||
+      board.fishInspector.dialog.open ||
       event.ctrlKey ||
       event.metaKey ||
       event.altKey ||
@@ -516,7 +591,11 @@ function attachInput(board, gameData, balance, performanceData) {
  * Board calls Logic, while Logic remains independent of presentation and timing APIs.
  */
 export function step(board, gameData, balance, deltaSeconds) {
-  if (!gameData.paused) Logic.tick(gameData, balance, deltaSeconds);
+  if (!gameData.paused) {
+    Logic.tick(gameData, balance, deltaSeconds);
+    // Cosmetic skinning follows simulation speed and freezes with the pause control.
+    board.animationTime += deltaSeconds * gameData.speed;
+  }
 }
 
 /**
@@ -527,6 +606,7 @@ export function step(board, gameData, balance, deltaSeconds) {
  */
 export function render(board, gameData) {
   board.geometry.instanceCount = gameData.agentCount;
+  board.fishMaterial.uniforms.swimTime.value = board.animationTime;
   for (let attributeIndex = 0; attributeIndex < 4; attributeIndex++) {
     // Three.js clears this list after upload. Reuse the range record itself.
     board.attributeUpdateRanges[attributeIndex].count = gameData.agentCount;
@@ -536,6 +616,14 @@ export function render(board, gameData) {
     board.instanceAttributes[attributeIndex].needsUpdate = true;
   }
   board.renderer.render(board.scene, board.camera);
+}
+
+/**
+ * Render the optional model viewer outside the swarm's CPU submission measurement.
+ * It uses the same main loop and clock; closed dialogs do no drawing or mixer updates.
+ */
+export function renderInspector(board) {
+  renderFishInspector(board.fishInspector, board.animationTime);
 }
 
 /**

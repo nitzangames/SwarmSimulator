@@ -141,6 +141,24 @@
             <div class="section-label">
               THE COLLECTIVE <span class="section-index">01</span>
             </div>
+            <div class="appearance-tabs" role="group" aria-label="Agent appearance">
+              <button
+                class="appearance-mode active"
+                data-appearance="triangles"
+                aria-pressed="true"
+              >
+                2 triangles
+              </button>
+              <button class="appearance-mode" data-appearance="fish" aria-pressed="false">
+                3D fish
+              </button>
+            </div>
+            <p id="appearance-description" class="subtle appearance-description">
+              Two triangles per agent.
+            </p>
+            <button id="inspect-fish" class="text-button inspect-fish" hidden>
+              Inspect fish <span>↗</span>
+            </button>
             <div class="population-number">
               <span id="population-value">12,000</span><span class="unit">agents</span>
             </div>
@@ -217,7 +235,7 @@
               ><input id="cohesion" type="range" min="0" max="3" step="0.1" value="0.8" />
             </div>
             <div class="speed-row">
-              <label for="speed">Flight speed</label
+              <label for="speed">Movement speed</label
               ><output id="speed-value" for="speed">1.0×</output>
             </div>
             <input id="speed" type="range" min="0.25" max="2" step="0.05" value="1" />
@@ -427,10 +445,10 @@ const gameData = {
         <div>
           <h3>Render the whole flock in one Three.js draw call.</h3>
           <p>
-            A single <code>InstancedBufferGeometry</code> repeats a two-triangle shape.
-            Its instance attributes reference the simulation arrays directly, and the
-            vertex shader rotates each shape to face its velocity. No per-agent mesh or
-            transformation matrix is needed.
+            A single <code>InstancedBufferGeometry</code> repeats the selected shape: two
+            triangles or a skinned 3D fish. Its instance attributes reference the
+            simulation arrays directly, and the vertex shader rotates each shape to face
+            its velocity. No per-agent mesh or transformation matrix is needed.
           </p>
           <div class="code-caption">
             SIMPLIFIED RENDERING ·
@@ -460,6 +478,18 @@ renderer.render(scene, camera);</code></pre>
             Typed arrays are uploaded to GPU buffers; this is not zero-copy CPU/GPU shared
             memory. Reusing the simulation arrays avoids an extra CPU packing buffer.
             After the initial upload, only the live prefixes are sent each frame.
+          </p>
+          <p>
+            Fish have a five-bone skeleton and weighted vertices. A swim clip is baked
+            into a shared bone-matrix texture; the GPU blends poses for each fish with its
+            own animation phase. More geometry and skinning add GPU work, so the
+            sustainable population can differ between modes.
+            <a
+              href="https://github.com/nitzangames/SwarmSimulator/blob/main/src/fish.js"
+              target="_blank"
+              rel="noreferrer"
+              >Read the fish source ↗</a
+            >
           </p>
         </div>
       </section>
@@ -530,6 +560,22 @@ renderer.render(scene, camera);</code></pre>
           >Three.js instancing documentation <span>↗</span></a
         >
       </section>
+    </dialog>
+    <dialog id="fish-inspector" aria-labelledby="fish-title">
+      <div class="fish-toolbar">
+        <h2 id="fish-title">Meet the fish.</h2>
+        <button id="fish-close" class="text-button" aria-label="Close fish inspector">
+          Close ×
+        </button>
+      </div>
+      <p class="subtle">A 3D mesh, five bones, one swim cycle. Drag to rotate.</p>
+      <canvas
+        id="fish-model"
+        aria-label="Animated 3D fish model. Drag to rotate the view."
+      ></canvas>
+      <label class="fish-bones-label"
+        ><input id="fish-bones" type="checkbox" /> Show skeleton</label
+      >
     </dialog>
     <script type="module" src="/src/main.js"></script>
   </body>

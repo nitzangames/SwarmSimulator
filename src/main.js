@@ -63,6 +63,8 @@ try {
         Board.updateStats(board, gameData, balance, performanceData);
         lastInterfaceUpdateTime = currentTime;
       }
+      // The optional close-up scene has its own renderer; its draw calls are not the flock's.
+      Board.renderInspector(board);
     }
 
     // Retain the handle so visibility changes can cancel the next scheduled frame.

@@ -106,6 +106,66 @@ try {
     path: "test-results/desktop-settled.png",
     fullPage: true,
   });
+  // Appearance changes keep a manual population intact and preserve a single crowd draw.
+  await page.locator("#population").fill("0");
+  const fishCount = await page.locator("#population-value").innerText();
+  await page.getByRole("button", { name: "3D fish", exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "3D fish", exact: true })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(await page.locator("#population-value").innerText(), fishCount);
+  await page.waitForTimeout(600);
+  assert.equal(await page.locator("#draw-value").innerText(), "1");
+  await page.screenshot({ path: "test-results/fish-school.png", fullPage: true });
+  await page.getByRole("button", { name: "Pause simulation", exact: true }).click();
+  await page.waitForTimeout(150);
+  const pausedFish = await page.locator("#swarm").screenshot();
+  await page.waitForTimeout(200);
+  assert.deepEqual(
+    await page.locator("#swarm").screenshot(),
+    pausedFish,
+    "pause freezes swimming as well as position",
+  );
+  await page.getByRole("button", { name: "Inspect fish", exact: false }).click();
+  await page.waitForTimeout(150);
+  const pausedModel = await page.locator("#fish-model").screenshot();
+  await page.waitForTimeout(200);
+  assert.deepEqual(
+    await page.locator("#fish-model").screenshot(),
+    pausedModel,
+    "inspector uses the paused clock too",
+  );
+  await page.getByRole("button", { name: "Close fish inspector" }).click();
+  await page.getByRole("button", { name: "Resume simulation", exact: true }).click();
+  await page.getByRole("button", { name: "Inspect fish", exact: false }).click();
+  const swimmingModel = await page.locator("#fish-model").screenshot();
+  await page.waitForTimeout(200);
+  assert.notDeepEqual(
+    await page.locator("#fish-model").screenshot(),
+    swimmingModel,
+    "the rig visibly animates",
+  );
+  await page.screenshot({ path: "test-results/fish-inspector.png" });
+  await page.locator("#fish-bones").check();
+  await page.screenshot({ path: "test-results/fish-skeleton.png" });
+  const modelBounds = await page.locator("#fish-model").boundingBox();
+  await page.mouse.move(
+    modelBounds.x + modelBounds.width / 2,
+    modelBounds.y + modelBounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    modelBounds.x + modelBounds.width / 2 + 80,
+    modelBounds.y + modelBounds.height / 2 + 20,
+  );
+  await page.mouse.up();
+  await page.screenshot({ path: "test-results/fish-rotated.png" });
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("#fish-inspector").isVisible(), false);
+
   // Run inside the page to simulate GPU-context interruption and test state recovery.
   const hasContextLossExtension = await page.evaluate(() => {
     const canvas = document.getElementById("swarm");
@@ -121,6 +181,18 @@ try {
     await page.locator("#canvas-error").waitFor({ state: "hidden" });
     console.log("WebGL context recovery passed.");
   }
+  // A restored context must upload the bone palette again and still allow a mode switch.
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator("#draw-value").innerText(), "1");
+  await page.getByRole("button", { name: "2 triangles", exact: true }).click();
+  assert.equal(await page.locator("#inspect-fish").isVisible(), false);
+  assert.equal(await page.locator("#population-value").innerText(), fishCount);
+  await page.getByRole("button", { name: "3D fish", exact: true }).click();
+  await page.getByRole("button", { name: "Find my limit" }).click();
+  assert.equal(await page.locator("#auto-scale").isChecked(), true);
+  console.log(
+    "Fish rendering, animation, pause, inspector, and appearance switching passed.",
+  );
   await desktop.close();
 
   // A separate context supplies phone viewport, pixel density, and touch input settings.
@@ -131,6 +203,10 @@ try {
   const phone = await mobile.newPage();
   // Include mobile page exceptions in the same final error assertion as the desktop run.
   phone.on("pageerror", (e) => errors.push(e.message));
+  // Shader compilation errors can be logged without throwing, including on mobile paths.
+  phone.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   await phone.goto(url);
   await phone.waitForTimeout(4000);
   assert.equal(await phone.locator("#canvas-error").isVisible(), false);
@@ -160,6 +236,24 @@ try {
   await phone.getByRole("button", { name: "Resume simulation", exact: true }).tap();
   await phone.touchscreen.tap(200, 340);
   assert.equal(await phone.locator("#pointer-ring").isVisible(), false);
+  // Phone controls also expose both renderers and a model viewer that fits the viewport.
+  await phone.locator("#population").fill("0");
+  await phone.getByRole("button", { name: "3D fish", exact: true }).tap();
+  await phone.waitForTimeout(300);
+  assert.equal(await phone.locator("#draw-value").innerText(), "1");
+  await phone.screenshot({ path: "test-results/mobile-fish.png", fullPage: true });
+  await phone.getByRole("button", { name: "Inspect fish", exact: false }).tap();
+  assert.ok(
+    await phone.locator("#fish-inspector").evaluate(
+      // Ensure the modal's contents remain inside its border on narrow screens.
+      (dialog) => dialog.scrollWidth <= dialog.clientWidth,
+    ),
+  );
+  await phone.locator("#fish-bones").check();
+  await phone.screenshot({ path: "test-results/mobile-fish-inspector.png" });
+  await phone.getByRole("button", { name: "Close fish inspector" }).tap();
+  await phone.getByRole("button", { name: "2 triangles", exact: true }).tap();
+  assert.equal(await phone.locator("#inspect-fish").isVisible(), false);
   console.log("Mobile viewport and touch controls passed.");
   assert.deepEqual(errors, []);
   console.log("No browser errors. Screenshots in test-results/.");
