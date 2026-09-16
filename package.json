@@ -1,0 +1,32 @@
+{
+  "name": "murmur-swarm-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A data-oriented flocking simulator using Three.js, typed arrays, and adaptive population scaling.",
+  "homepage": "https://swarm.nitzan.games/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nitzangames/SwarmSimulator.git"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test test/*.test.js",
+    "benchmark": "node scripts/benchmark.js",
+    "test:browser": "node scripts/browser-check.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "three": "0.186.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "prettier": "3.9.6",
+    "vite": "8.3.0",
+    "wrangler": "4.132.0"
+  }
+}

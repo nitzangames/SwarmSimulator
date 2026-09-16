@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "murmur-swarm",
+  "account_id": "d227e2e1b3ec61357a16046db21d393d",
+  "compatibility_date": "2026-09-15",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+  },
+  "routes": [
+    {
+      "pattern": "swarm.nitzan.games/*",
+      "zone_name": "nitzan.games",
+    },
+  ],
+}
